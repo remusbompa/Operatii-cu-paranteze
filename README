@@ -1,0 +1,187 @@
+Tema contine 3 fisiere sursa:
+- main.c care cuprinde programul principal
+- functii.c cuprinde functiile ce vor fi apelate in tema
+- TSructuri.h in care sunt definite structurile ce vor fi folosite in program, prototipul functiilor si al 
+pointerilor la functii.Structurile folosite in program sunt:
+	>TStiva care contine dimensiunea elementelor(dime) si varful stivei(vf)
+	>TCoada cu campurile dime (dimensiunea elementelor), ic(inceputul cozii) si sc(sfarsitul cozii)
+	>TCelulaG care are campurile: informatie (info) si celula urmatoare (urm) si este folosita pentru a 
+	reprezenta celulele generice din lista sivei/cozii
+	>Paranteza contine campurile id_paranteza si tip si constituie informatia ce va fi stocata in celule
+
+- cum programul va fi rulat ./tema2 in_file out_file, am salvat in nume_in si nume_out numele fisierelor din 
+care se citeste/in care se scrie iar fin si fout sunt pointerii la aceste fisiere
+- dupa ce se citeste numarul de operatii(N), de stive(S) si de cozi(C), se aloca vectorii s si c de stive/cozi.
+Pe rand se  aloca memorie pentru fiecare stiva/coada cu indicile de la 0 la S-1/C-1 (s[i]=InitS(sizeof(Paranteza
+))/c[i]=InitQ(sizeof(Paranteza))).Pentru asta am folosit functiile:
+	>TStiva* InitS(int dime): aloca spatiu pentru stiva s si initializeaza campul dime cu parametrul primit
+	in paranteza. Intoarce un pointer catre stiva alocata.
+	>TCoada * InitQ(int dime): aloca spatiu pentru coada c si initializeaza campul dime cu parametrul primit
+	in paranteza. Intoarce un pointer catre coada alocata.
+- pentru fiecare operatie citita (while (N>0)) se salveaza numele acesteia in sirul operatie si in functie de
+acesta se apeleaza un set de functii:
+
+1)push
+- se salveaza in variabila p (de tip Paranteza*) informatiile despre paranteza (id_paranteza si tip), care se
+citesc din fisierul fin alaturi de id_stiva. Se apeleaza functia Push(s[id_stiva],p) unde parametrii sunt: 
+stiva cu indicile id_stiva si informatia despre paranteza (ce va fi introdusa intr-o noua celula din stiva).
+Daca nu se reuseste alocarea unei noi celule in stiva se iese din program (if(!Push(s[id_stiva],p)) return 0;).
+Se folosesc functiile:
+	>TLG AlocCelula(void *ae) intoarece un pointer catre o noua celula creata (TLG) avand campul urm NULL
+	si in campul info informatia ae. Intoarce NULL daca nu se reuseste alocarea.
+	>int Push(TStiva *s,void *ae) apeleaza functia anterioara pentru a aloca o celula cu informatia ae ce
+	este introdusa la varful stivei s. Daca alocarea nu reuseste functia intoarce 0.
+
+2)intrq
+- se salveaza in variabila p (de tip Paranteza*) informatiile despre paranteza (id_paranteza si tip), care se
+citesc din fisierul fin alaturi de id_coada. Se apeleaza functia IntrQ(c[id_coada],p) unde parametrii sunt:
+coada cu indicile id_coada si informatia despre paranteza (ce va fi introdusa intr-o noua celula din coada).
+Daca nu se reuseste alocarea unei noi celule in coada se iese din program (if(!IntrQ(c[id_coada],p)) return 0;).
+Se foloseste functia:
+	>int IntrQ(TCoada *c,void *ae) apeleaza functia AlocCelula pentru a aloca o celula cu informatia ae ce
+        este introdusa la sfarsitul cozii c. Daca alocarea nu reuseste functia intoarce 0.
+
+3)pop
+- se aloca spatiu pentru elementul de tip Paranteza p, se citeste id_stiva si se apeleaza functia Pop(s
+[id_stiva],p), avand ca parametri stiva cu indicele id_stiva din care se extrage varful si variabila p (alo-
+cata in prealabil) in care se salveaza informatia din varf. Cum nu mai este nevoie de informatia din p, p se 
+elibereaza (free(p)).
+Se apeleaza functia:
+	>int Pop(TStiva *s,void *ae) intoarce 0 daca stiva este goala si 1 daca se poate extrage varful. Functia
+extrage varful, salveaza informatia din celula extrasa in ae (memcpy(ae,aux->info,s->dime);),reface legaturile 
+si elibereaza celula extrasa (informatia si celula propriu-zisa).
+
+4)extrq
+- se aloca spatiu pentru elementul de tip Paranteza p, se citeste id_coada si se apeleaza functia ExtrQ(c
+[id_coada],p), avand ca parametri coada cu indicele id_coada din care se extrage inceputul si variabila p (alo-
+cata in prealabil) in care se salveaza informatia din ineputul cozii. Cum nu mai este nevoie de informatia din 
+p, p se elibereaza (free(p)).
+Se apeleaza functia:
+        >int ExtrQ(TCoada *c,void *ae) intoarce 0 daca coada este goala si 1 daca se poate extrage inceputul ei.
+Functia extrage inceputul cozii, salveaza informatia din celula extrasa in ae (memcpy(ae,aux->info,c->dime);),
+reface legaturile si elibereaza celula extrasa (informatia si celula propriu-zisa).
+
+5)sorts
+- se citeste id_stiva si se apeleaza SortS(s[id_stiva],cmp), unde parametrii sunt stiva cu indicele id_stiva si
+un pointer la functia de comparat cmp:
+	>int cmp(void *a,void *b) intoarce diferenta dintre id-ul din paranteza a si cel din b
+Se apeleaza functia:
+	>void SortS(TStiva *s,TFCmp cmp) sorteaza crescator stiva s folosind stiva auxiliara aux astfel:
+	-cat timp stiva s nu e goala: 
+		*)extrag varful stivei (svf)
+		*)daca stiva aux este goala sau id_paranteza din svf este mai mic decat id_paranteza din  varful
+stivei aux, svf se introduce in aux.In caz contrar se axtrag toate elementele consecutive din aux care au id-ul
+mai mic decat cel din svf (while(aux->vf&&cmp(svf,aux->vf->info)>0)) si se pun inapoi in s. In acest fel, stiva
+aux va avea intotdeauna elementele ordonate descrescator.
+	-se extrag elementele din aux in s (se rastoarna stiva aux in s).Astfel stiva s va avea elementele 
+ordonate crescator
+
+6)sortq
+- se citeste id_coada si se apeleaza SortQ(c[id_coada],cmp), unde parametrii sunt coada cu indicele id_coada si
+un pointer la functia de comparat cmp.
+Se apeleaza functia:
+	>void SortQ(TCoada *c,TFCmp cmp) sorteaza crescator coada c folosind stivele auxiliare s si aux astfel:
+	-se pun elementele din coada c in stiva s
+	-se sorteaza crescator stiva s apeland SortS(s,cmp)
+	-se pun elementele din stiva s in stiva aux (daca se pun direct elementele din stiva s in coada c, se 
+obtine coada c ordonata descrescator deoarece inserarea stivei se face de la varf la baza)
+	-se pun elementele din stiva aux in coada c
+
+7)prints
+-pentru fiecare stiva cu indicele i de la 0 la S-1 se apeleaza PrintS(s[i],Afi,fout), unde s[i] este stiva cu
+indicele i, fout este pointerul la fisierul in care se scrie iar Afi este pointer catre functia de afisare:
+	>void Afi(void *ae,FILE *fout) care afiseaza tipul parantezei pentru o informatie ae care se poate 
+	converti la tipul Paranteza*
+Se apeleaza functia:
+	>void PrintS(TStiva *s,TF Afi,FILE *fout):
+		-stiva s se rastoarna in stiva auxiliara aux
+		-elementele stivei aux se extrag inapoi in stiva s, pentru fiecare afisandu-se tipul ( Afi(ae,
+		fout) ).Astfel stiva este afisata de la baza la varf.
+
+8)printq
+-pentru fiecare coada cu indicele i de la 0 la C-1 se apeleaza PrintQ(c[i],Afi,fout), unde c[i] este coada cu
+indicele i, fout este pointerul la fisierul in care se scrie iar Afi este pointer catre functia de afisare.
+Se apeleaza functia:
+	>void PrintQ(TCoada *c,TF Afi,FILE *fout)
+               -coada c se goleste in coada auxiliara aux
+               -elementele cozii aux se extrag inapoi in coada c, pentru fiecare afisandu-se tipul ( Afi(ae,
+                fout) ).
+
+9)corrects
+-se apeleaza CorrectS(s[id_stiva],fout) unde id_stiva se citeste din fisierul fin.
+	>void CorrectS(TStiva *s,FILE *fout) 
+		-foloseste functia >TStiva* CopyS(TStiva *s) care creeaza copia rasturnata a stivei s
+		-salveaza in intors copia rasturnata a stivei s si se extrag pe rand elementele din stiva intors
+		-se contorizeaza elementul la care s-a ajuns cu ajutorul variabilei ind. I se da campului 
+		id_paranteza din informatia fiecarui element extras valoarea ind ( ((Paranteza*)ae)->id_paran-
+		teza=ind ) astfel incat sa se poata sti ordinea parantezelor.
+		-daca paranteza e deschisa: daca intors nu mai are elemente (if(!intors->vf) ), se sterg elemen-
+		tele ramase in stiva aux iar in caz contrar se introduce paranteza in aux.
+		-daca paranteza e inchisa:
+		1)daca aux mai are elemente iar paranteza inchide corect varful lui aux ( if(aux->vf&&Verifica((
+		(Paranteza*)aux->vf->info)->tip,p)) )
+			*)se extrage paranteza pereche din varful lui aux
+			*)daca aux ajunge goala lungimea (l) va fi diferenta dintre indicele parantezei extrase 
+			din intors minus indicele primei paranteze dupa subsirul valid anterior (ant) (ind-ant)
+			*)daca aux nu s-a golit lungimea subsirului va fi doar indicele parantezei extrase
+			minus cel al varfului stivei aux (obtinut dupa extragerea din aux a parantezei pereche)
+			(ind-((Paranteza*)aux->vf->info)->id_paranteza)
+			*)se compara lungimea subsirului obtinut cu cea maxima (maxl) si daca e mai mare maxl=l
+			*)daca intors s-a terminat, se goleste aux
+		2)in caz contrar(aux nu mai are elemente sau paranteza nu inchide corect varful lui aux)
+			*)ant=ind (indicele primei paranteze dupa subsirul valid anterior)
+			*)se goleste stiva aux
+		-se afiseaza lungimea maxima aflata (fprintf(fout,"%d\n",maxl))
+		-pentru a verifica daca o paranteza inchide corect alta paranteza am apelat functia:
+			>int Verifica(char a,char b) care intoarce 1 daca b il inchide corect pe a si 0 in caz
+			contrar
+
+10)correctq
+-se apeleaza CorrectQ(c[id_coada],fout) unde id_coada se citeste din fisierul fin.
+	>void CorrectQ(TCoada *c,FILE *fout)
+		-foloseste functia >TCoada* CopyQ(TCoada *c) care creeaza copia cozii c
+		-se salveaza in copie copia cozii c si se extrag pe rand elementele din coada copie
+		-se repeta algoritmul (de aflare a lungimii maxime a unui subsir valid) de la functia CorrectS
+
+- La finalul functiei main, pentru eliberarea stivelor si cozilor am folosit functiile:
+	>void ElibS(TStiva *s)
+	>void ElibQ(TCoada *c)
+	care elibereaza stiva/coada data ca parametru
+
+Punctajul obtinut la teste:
+
+                     = Tema 2 SD Switch-uri de Retea =
+
+[test0.out]...........................................passed  [08/85]
+[VALGRIND: test0.out].................................passed  [02/85]
+
+[test1.out]...........................................passed  [08/85]
+[VALGRIND: test1.out].................................passed  [02/85]
+
+[test2.out]...........................................passed  [08/85]
+[VALGRIND: test2.out].................................passed  [02/85]
+
+[test3.out]...........................................passed  [08/85]
+[VALGRIND: test3.out].................................passed  [02/85]
+
+[test4.out]...........................................passed  [08/85]
+[VALGRIND: test4.out].................................passed  [02/85]
+
+[test5.out]...........................................passed  [08/85]
+[VALGRIND: test5.out].................................passed  [02/85]
+
+[test6.out]...........................................passed  [08/85]
+[VALGRIND: test6.out].................................passed  [02/85]
+
+[test7.out]...........................................passed  [08/85]
+[VALGRIND: test7.out].................................passed  [02/85]
+
+[test8.out]...........................................passed  [08/85]
+[VALGRIND: test8.out].................................passed  [02/85]
+
+[test9.out]...........................................passed  [13/85]
+[VALGRIND: test9.out].................................passed  [02/85]
+
+
+                                           Total: [105/85]
+
